@@ -1,0 +1,173 @@
+---
+- become: true
+  become_user: root
+  hosts: all
+  gather_facts: true
+  name: Zatsepin FOREVER!
+  tasks:
+    -
+      apt: "update_cache=yes force_apt_get=yes cache_valid_time=1"
+      name: "repo update"
+    -
+      apt: "upgrade=dist force_apt_get=yes"
+      name: "repo upgrade"
+    -
+      name: "check if reboot is needed"
+      register: reboot_required_file
+      stat: "path=/vat/run/reboot-required get_md5=no"
+
+    - name: "install packages"
+      become: true
+      become_user: root
+      apt:
+        state: present
+        name:
+         - curl
+
+    - name: "ufw enabled"
+      ufw:
+        state: "{{ item }}"
+        policy: "allow"
+        logging: "on"
+      with_items:
+        - "enabled"
+
+    - name: "ufw rules"
+      ufw:
+        rule: "allow"
+        port: "{{ item }}"
+        proto: "tcp"
+      with_items:
+        - "80"
+        - "22"
+        - "8080"
+        - "1834"
+
+    - name: "adding ssh 1834 port"
+      lineinfile:
+            dest: "{{ item }}"
+            regexp: "'^Port'"
+            line: "Port 1834"
+            state: "present"
+            backup: "yes"
+      with_items:
+       - "/etc/ssh/sshd_config"
+      notify: "restart sshd"
+
+    -  name: "adding Webdeveloper"
+       user:
+          name: "Webdeveloper"
+          password: "S52we9V6QTp7"
+          group: "sudo"
+          state: present
+          shell: /bin/bash
+          append: yes
+#          generate_ssh_key: yes
+#          generate_key_bits: 2048
+#          ssh_key_file: .ssh/id_rsa.pub
+#          home: "/home"
+#          uid: "1000"
+
+    -  name: "adding Devopsengineer"
+       user:
+          name: "Devopsengineer"
+          password: "dHy6sKGHsj2T"
+          group: "sudo"
+          state: "present"
+          shell: "/bin/bash"
+          append: yes
+#          generate_ssh_key: yes
+#          generate_ssh_bits: 2048
+#          ssh_key_file: .ssh/id_rsa.pub
+#          home: "/home"
+#          uid: "1000"
+
+    -  name: "adding Projectmanager"
+       user:
+          name: "Projectmanager"
+          password: "oP92ugMSaCbe"
+          group: "sudo"
+          state: "present"
+          shell: "/bin/bash"
+          append: yes
+#          generate_ssh_key: yes
+#          genetate_ssh_bits: 2048
+#          ssh_key_file: .ssh/id_rsa.pub
+#          home: "/home"
+#          uid: "1000"
+
+
+    - name: Add Docker Repository
+      apt:
+        state: latest
+        name:
+         - ca-certificates
+         - gnupg
+         - lsb-release
+         - docker-ce
+         - docker-ce-cli
+         - containerd.io
+
+    - name: Add Docker APT repository
+      apt_repository:
+                   state: present
+                   repo: deb https://download.docker.com/linux/{{ansible_distribution|lower}} {{ansible_distribution_release}} stable
+
+
+    - name: Install docker-ce-cli
+      apt:
+        state: present
+        name:
+         - docker-ce-cli
+
+
+    - name: Install containerd.io
+      apt:
+        state: present
+        name:
+         - containerd.io
+
+    - name: Install docker-compose
+      get_url:
+            url: https://github.com/docker/compose/releases/download/1.25.1-rc1/docker-compose-Linux-x86_64
+            dest: /usr/local/bin/docker-compose
+            mode: 'u+x,g+x'
+  
+    - name: Creating directory /skillcloud-nginx
+      file:
+        path=/root/skillcloud-nginx/ state=directory
+
+    - name: Creating Folders
+      file:
+        path: "{{ item }}"
+        state: touch
+        owner: root
+      with_items:
+       - "/root/skillcloud-nginx/index.html"
+       - "/root/skillcloud-nginx/nginx.conf"
+      become: yes    
+
+    - name: Restart ssh
+      service:
+        name: sshd
+        state: restarted
+    
+    - name: Restart ufw
+      service:
+        name: ufw
+        state: restarted 
+   
+    - name: Reboot all servers :)      
+      reboot: 
+
+
+
+
+
+
+
+
+
+
+
+
